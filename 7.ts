@@ -10,105 +10,93 @@ const parse_input = (input: string): Input => {
 };
 
 type Machine = {
+  mem: number[];
   input: number[];
-  i: number;
-  phase: number;
-  inp: number[];
-  out: number[];
+  output?: Iterator<number>;
+  last_output?: number;
   done: boolean;
 };
 
-const run = (machine: Machine) => {
-  let { i, input } = machine;
-  while (i < input.length) {
-    const op = input[i] % 100;
-    const ins = `0000${input[i]}`.split("").reverse();
-    const get = x => (ins[x + 1] === "0" ? input[input[i + x]] : input[i + x]);
+const run_machine = function*(state: Machine): IterableIterator<number> {
+  const { mem } = state;
+  let ip = 0;
+  while (true) {
+    const op = mem[ip] % 100;
+    const ins = `0000${mem[ip]}`.split("").reverse();
+    const get = x => (ins[x + 1] === "0" ? mem[mem[ip + x]] : mem[ip + x]);
     switch (op) {
       case 1:
-        input[input[i + 3]] = get(1) + get(2);
-        i += 4;
+        mem[mem[ip + 3]] = get(1) + get(2);
+        ip += 4;
         break;
       case 2:
-        input[input[i + 3]] = get(1) * get(2);
-        i += 4;
+        mem[mem[ip + 3]] = get(1) * get(2);
+        ip += 4;
         break;
       case 3:
-        const inp = (() => {
-          if (machine.phase !== null) {
-            const r = machine.phase;
-            machine.phase = null;
-            return r;
-          }
-          if (!machine.inp.length) {
-            throw new Error("No input");
-          }
-          return machine.inp[machine.inp.length - 1];
-        })();
-        input[input[i + 1]] = inp;
-        i += 2;
+        assert(state.input.length > 0);
+        mem[mem[ip + 1]] = state.input.shift();
+        ip += 2;
         break;
       case 4:
-        machine.out.push(get(1));
-        i += 2;
-        Object.assign(machine, { i });
-        return;
+        state.last_output = get(1);
+        yield state.last_output;
+        ip += 2;
+        break;
       case 5:
         if (get(1) !== 0) {
-          i = get(2);
+          ip = get(2);
         } else {
-          i += 3;
+          ip += 3;
         }
         break;
       case 6:
         if (get(1) === 0) {
-          i = get(2);
+          ip = get(2);
         } else {
-          i += 3;
+          ip += 3;
         }
         break;
       case 7:
-        input[input[i + 3]] = get(1) < get(2) ? 1 : 0;
-        i += 4;
+        mem[mem[ip + 3]] = get(1) < get(2) ? 1 : 0;
+        ip += 4;
         break;
       case 8:
-        input[input[i + 3]] = get(1) === get(2) ? 1 : 0;
-        i += 4;
+        mem[mem[ip + 3]] = get(1) === get(2) ? 1 : 0;
+        ip += 4;
         break;
       case 99:
-        Object.assign(machine, { i, done: true });
+        state.done = true;
         return;
       default:
-        throw new Error(`Invalid op:${op} ${input.slice(i)}`);
+        throw new Error(`Invalid op:${op} ${mem.slice(ip)}`);
     }
   }
 };
 
-const run_phases = (input: Input, phases: number[]): number => {
+const run_phases = (input0: Input, phases: number[]): number => {
   const machines = phases.map(phase => {
     const m: Machine = {
-      input: [...input],
-      i: 0,
-      phase,
-      inp: [],
-      out: [],
+      mem: [...input0],
+      input: [phase],
       done: false
     };
+    m.output = run_machine(m);
     return m;
   });
-  machines[0].inp.push(0);
+  machines[0].input.push(0);
   while (true) {
     if (machines.every(x => x.done)) {
       const machine = machines[machines.length - 1];
-      const last = machine.out[machine.out.length - 1];
-      return last;
+      return machine.last_output;
     }
     for (let i = 0; i < machines.length; i += 1) {
       const machine = machines[i];
-      run(machine);
+      if (!machine.done) {
+        machine.output.next();
+      }
       const j = (i + 1) % machines.length;
-      const last = machine.out[machine.out.length - 1];
-      machines[j].inp.push(last);
+      machines[j].input.push(machine.last_output);
     }
   }
 };
@@ -191,4 +179,5 @@ const part2 = (input0: Input): any => {
   assertEquals(run_phases(parse_input(input), [9, 8, 7, 6, 5]), 139629729);
   input = `3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10`;
   assertEquals(run_phases(parse_input(input), [9, 7, 8, 5, 6]), 18216);
+  assertEquals(exec2(parse_input(input)), [[9, 7, 8, 5, 6], 18216]);
 }
