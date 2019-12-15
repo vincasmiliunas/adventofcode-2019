@@ -1,6 +1,6 @@
 .PHONY: w r
 
-TARGET := 12.ts
+TARGET := 15.ts
 
 w:
 	@watchexec -w $(TARGET) -d 10 -c -r -n -- deno --allow-read $(TARGET)
