@@ -60,7 +60,7 @@ const part2 = (input0: Input): number => {
 
 {
   const utf8_decoder = new TextDecoder();
-  const input0 = utf8_decoder.decode(Deno.readFileSync("2.txt"));
+  const input0 = utf8_decoder.decode(Deno.readFileSync("input/2.txt"));
   const input = parse_input(input0);
   // p("input", input);
   p(`Part1:`, part1(input));

@@ -80,7 +80,7 @@ const part2 = (input: Input): any => {
 
 {
   const utf8_decoder = new TextDecoder();
-  const input0 = utf8_decoder.decode(Deno.readFileSync("3.txt"));
+  const input0 = utf8_decoder.decode(Deno.readFileSync("input/3.txt"));
   const input = parse_input(input0);
   // p("input", input);
   p(`Part1:`, part1(input));
